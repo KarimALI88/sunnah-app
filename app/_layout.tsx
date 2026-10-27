@@ -1,59 +1,104 @@
-import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Amiri_400Regular, Amiri_700Bold } from "@expo-google-fonts/amiri";
+import {
+  IBMPlexSansArabic_400Regular,
+  IBMPlexSansArabic_500Medium,
+  IBMPlexSansArabic_600SemiBold,
+  IBMPlexSansArabic_700Bold,
+} from "@expo-google-fonts/ibm-plex-sans-arabic";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { useFonts } from "expo-font";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { Platform } from "react-native";
+import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 
-import { useColorScheme } from '@/components/useColorScheme';
+import { requestLocationPermission } from "@/features/prayer-times/services/location.service";
+import { IdentityProvider } from "@/providers/IdentityProvider";
+import { QueryProvider } from "@/providers/QueryProvider";
+import { SettingsProvider } from "@/providers/SettingsProvider";
+import { colors } from "@/theme";
 
-export {
-  // Catch any errors thrown by the Layout component.
-  ErrorBoundary,
-} from 'expo-router';
+export { ErrorBoundary } from "expo-router";
 
 export const unstable_settings = {
-  // Ensure that reloading on `/modal` keeps a back button present.
-  initialRouteName: '(tabs)',
+  anchor: "(tabs)",
 };
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function RootLayout() {
   const [loaded, error] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    ...FontAwesome.font,
+    IBMPlexSansArabic_400Regular,
+    IBMPlexSansArabic_500Medium,
+    IBMPlexSansArabic_600SemiBold,
+    IBMPlexSansArabic_700Bold,
+    Amiri_400Regular,
+    Amiri_700Bold,
+    ...MaterialIcons.font,
   });
 
-  // Expo Router uses Error Boundaries to catch errors in the navigation tree.
   useEffect(() => {
-    if (error) throw error;
+    if (error) {
+      console.warn("Font loading error:", error);
+    }
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+    // Ask for location access as the first thing when the app opens.
+    void requestLocationPermission();
+  }, []);
 
-  if (!loaded) {
+  useEffect(() => {
+    if (loaded || error) {
+      SplashScreen.hideAsync().catch(() => {});
+    }
+  }, [loaded, error]);
+
+  if (Platform.OS !== "web" && !loaded && !error) {
     return null;
   }
 
-  return <RootLayoutNav />;
-}
-
-function RootLayoutNav() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal' }} />
-      </Stack>
-    </ThemeProvider>
+    <SafeAreaProvider>
+      <IdentityProvider>
+        <QueryProvider>
+          <SettingsProvider>
+            <StatusBar style="dark" backgroundColor={colors.surface} />
+            <Stack
+              screenOptions={{
+                headerShown: false,
+                contentStyle: { backgroundColor: colors.surface },
+                animation: "slide_from_right",
+              }}
+            >
+              <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+              <Stack.Screen
+                name="azkar/[categoryId]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="azkar/read/[dhikrId]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="azkar/subcategory/[subcategoryId]"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="allah-names"
+                options={{ headerShown: false }}
+              />
+              <Stack.Screen
+                name="wird/create"
+                options={{ presentation: "modal", headerShown: false }}
+              />
+            </Stack>
+          </SettingsProvider>
+        </QueryProvider>
+      </IdentityProvider>
+    </SafeAreaProvider>
   );
 }
