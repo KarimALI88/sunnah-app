@@ -31,13 +31,12 @@ export async function getStoredIdentity(): Promise<GuestIdentity | null> {
 export async function ensureGuestIdentity(): Promise<GuestIdentity> {
   const stored = await getStoredIdentity();
   if (stored) {
-    console.log('[Identity] Using stored guest identity:', stored.identity_id);
     return stored;
   }
 
-  console.log('[Identity] No stored identity — requesting a new guest identity');
   const response = await apiRequest<GuestIdentityResponse>(endpoints.guestIdentities, {
     method: 'POST',
+    auth: false,
   });
 
   const identity = response?.data;
@@ -50,6 +49,5 @@ export async function ensureGuestIdentity(): Promise<GuestIdentity> {
     [STORAGE_KEYS.guestToken, identity.guest_token],
   ]);
 
-  console.log('[Identity] Stored new guest identity:', identity.identity_id);
   return identity;
 }

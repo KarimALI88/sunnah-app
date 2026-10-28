@@ -1,22 +1,22 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 
 import { AppHeader } from '@/components/shared/AppHeader';
 import { AppText } from '@/components/ui/AppText';
 import { Icon } from '@/components/ui/Icon';
-import { usePrayerTimes, useUpcomingPrayer } from '@/features/prayer-times/hooks/usePrayerTimes';
-import type { PrayerTime } from '@/features/prayer-times/types';
+import { useUpcomingPrayer } from '@/features/prayer-times/hooks/usePrayerTimes';
+import { useLocationRefresh } from '@/features/prayer-times/hooks/useLocationRefresh';
+import { LocationAccessPrompt } from '@/components/shared/LocationAccessPrompt';
 import { useSettings } from '@/providers/SettingsProvider';
 import { colors, radii, spacing } from '@/theme';
 import { formatCountdown } from '@/utils/numerals';
 
 export function PrayerTimesScreen() {
-  const { data: day } = usePrayerTimes();
-  const { upcoming } = useUpcomingPrayer();
+  const { data: day, upcoming, isLoading: prayerTimesLoading } = useUpcomingPrayer();
+  const locationRefresh = useLocationRefresh();
   const { settings, setPrayerAlert, update } = useSettings();
-  const [selectedCity, setSelectedCity] = useState('الرياض، السعودية');
+  const selectedCity = [day?.city, day?.country].filter(Boolean).join('، ') || 'الموقع غير متاح';
 
   const prayers = day?.prayers ?? [];
 
@@ -29,6 +29,16 @@ export function PrayerTimesScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}>
         {/* Top Location & Date Header */}
+        {!day && !prayerTimesLoading ? (
+          <LocationAccessPrompt
+            isRefreshing={locationRefresh.isRefreshing}
+            needsSettings={locationRefresh.needsSettings}
+            error={locationRefresh.error}
+            onRequestLocation={locationRefresh.requestCurrentLocation}
+            onOpenSettings={locationRefresh.openSettings}
+          />
+        ) : null}
+
         <View style={styles.topSection}>
           <View style={styles.locationRow}>
             <AppText variant="headlineLg" color={colors.primary}>
@@ -45,7 +55,7 @@ export function PrayerTimesScreen() {
           <View style={styles.dateRow}>
             <Icon name="event" size={16} color={colors.gold} />
             <AppText variant="labelMd" color={colors.onSurfaceVariant}>
-              {day?.hijriDate ?? 'الجمعة، ١٤ رمضان ١٤٤٦ هـ'} • {day?.gregorianDate ?? '٢١ مارس'}
+              {day ? `${day.hijriDate} • ${day.gregorianDate}` : '—'}
             </AppText>
           </View>
         </View>
@@ -74,10 +84,10 @@ export function PrayerTimesScreen() {
           <View style={styles.heroMain}>
             <View>
               <AppText variant="displayLg" color={colors.onPrimary}>
-                {upcoming?.prayer.name ?? 'العصر'}
+                {upcoming?.prayer.name ?? '—'}
               </AppText>
               <AppText variant="labelMd" color={colors.onPrimaryContainer} style={{ marginTop: 2 }}>
-                الأذان القادم: {upcoming?.prayer.timeLabel ?? '٠٤:٣٠ م'}
+                الأذان القادم: {upcoming?.prayer.timeLabel ?? '—'}
               </AppText>
             </View>
 

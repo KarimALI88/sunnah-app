@@ -66,7 +66,7 @@ export default function RootLayout() {
       <IdentityProvider>
         <QueryProvider>
           <SettingsProvider>
-            <StatusBar style="dark" backgroundColor={colors.surface} />
+            <StatusBar style="dark" />
             <Stack
               screenOptions={{
                 headerShown: false,

@@ -11,27 +11,11 @@ export function useCategories() {
   });
 }
 
-export function useCategory(categoryId: string) {
-  return useQuery({
-    queryKey: azkarKeys.category(categoryId),
-    queryFn: () => azkarRepository.getCategory(categoryId),
-    enabled: Boolean(categoryId),
-  });
-}
-
 export function useSubcategories(categoryId: string) {
   return useQuery({
     queryKey: azkarKeys.subcategories(categoryId),
     queryFn: () => azkarRepository.getSubcategories(categoryId),
     enabled: Boolean(categoryId),
-  });
-}
-
-export function useSubcategory(subcategoryId: string) {
-  return useQuery({
-    queryKey: azkarKeys.subcategory(subcategoryId),
-    queryFn: () => azkarRepository.getSubcategory(subcategoryId),
-    enabled: Boolean(subcategoryId),
   });
 }
 

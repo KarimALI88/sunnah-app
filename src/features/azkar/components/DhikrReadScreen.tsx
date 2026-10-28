@@ -1,14 +1,17 @@
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { ErrorState } from '@/components/feedback/ErrorState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { AppText } from '@/components/ui/AppText';
 import { Icon } from '@/components/ui/Icon';
-import { useDhikrs, useSubcategory } from '@/features/azkar/hooks/useAzkar';
+import { useDhikrs, useSubcategories } from '@/features/azkar/hooks/useAzkar';
 import { isComplete, nextCount, progressPercent } from '@/features/azkar/utils/counter';
 import { useSettings } from '@/providers/SettingsProvider';
 import { colors, radii, spacing } from '@/theme';
@@ -21,28 +24,28 @@ const C = 2 * Math.PI * R;
 export function DhikrReadScreen({
   dhikrId,
   subcategoryId,
+  categoryId,
+  subcategoryTitle,
 }: {
   dhikrId: string;
   subcategoryId?: string;
+  categoryId?: string;
+  subcategoryTitle?: string;
 }) {
+  const insets = useSafeAreaInsets();
   const { settings, update } = useSettings();
   const resolvedSubId = subcategoryId ?? dhikrId.split('-')[0];
-  const { data: list, isLoading } = useDhikrs(resolvedSubId);
-  const { data: subcategory } = useSubcategory(resolvedSubId);
-  const [index, setIndex] = useState(0);
+  const { data: list, isLoading, isError, refetch } = useDhikrs(resolvedSubId);
+  const { data: subcategories } = useSubcategories(categoryId ?? '');
+  const subcategory = subcategories?.find((item) => item.id === resolvedSubId);
+  const [activeDhikrId, setActiveDhikrId] = useState(dhikrId);
   const [count, setCount] = useState(0);
   const [exitOpen, setExitOpen] = useState(false);
   const [audioOpen, setAudioOpen] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
 
-  useEffect(() => {
-    if (!list?.length) return;
-    const found = list.findIndex((item) => item.id === dhikrId);
-    setIndex(found >= 0 ? found : 0);
-    setCount(found === 1 ? 2 : 0);
-    setDoneAll(false);
-  }, [list, dhikrId]);
-
+  const requestedIndex = list?.findIndex((item) => item.id === activeDhikrId) ?? -1;
+  const index = requestedIndex >= 0 ? requestedIndex : 0;
   const dhikr = list?.[index];
   const total = list?.length ?? 0;
   const complete = dhikr ? isComplete(count, dhikr.targetCount) : false;
@@ -50,13 +53,21 @@ export function DhikrReadScreen({
   const offset = C - (progress / 100) * C;
 
   const headerLabel = useMemo(() => {
-    if (!subcategory) return '';
-    return `${subcategory.title} (${toEasternNumerals(index + 1)} من ${toEasternNumerals(total)})`;
-  }, [subcategory, index, total]);
+    const title = subcategory?.title ?? subcategoryTitle;
+    if (!title) return '';
+    return `${title} (${toEasternNumerals(index + 1)} من ${toEasternNumerals(total)})`;
+  }, [subcategory, subcategoryTitle, index, total]);
+  const safePageStyle = [styles.page, { paddingTop: insets.top + spacing.sm }];
+  const navigateBack = () => {
+    if (router.canGoBack()) router.back();
+    else router.replace('/(tabs)/categories');
+  };
 
-  if (isLoading || !dhikr) {
-    return <LoadingState label="جاري تجهيز الذكر..." />;
+  if (isLoading) {
+    return <View style={safePageStyle}><LoadingState label="جاري تجهيز الذكر..." /></View>;
   }
+  if (isError) return <View style={safePageStyle}><ErrorState onRetry={() => { void refetch(); }} /></View>;
+  if (!dhikr) return <View style={safePageStyle}><EmptyState title="لا توجد أذكار في هذا القسم" message="جرّب العودة واختيار قسم آخر." /></View>;
 
   const goNext = () => {
     if (!list) return;
@@ -64,42 +75,42 @@ export function DhikrReadScreen({
       setDoneAll(true);
       return;
     }
-    setIndex((value) => value + 1);
+    setActiveDhikrId(list[index + 1].id);
     setCount(0);
   };
 
   const goPrev = () => {
     if (index === 0) return;
-    setIndex((value) => value - 1);
+    setActiveDhikrId(list?.[index - 1]?.id ?? '');
     setCount(0);
   };
 
-  const onTap = async () => {
-    await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const onTap = () => {
     if (!dhikr) return;
     if (count >= dhikr.targetCount) {
       goNext();
       return;
     }
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const next = nextCount(count, dhikr.targetCount);
     setCount(next);
     if (next >= dhikr.targetCount) {
-      await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }
   };
 
   if (doneAll) {
     return (
-      <View style={styles.page}>
+      <View style={safePageStyle}>
         <View style={styles.completeCard}>
           <Icon name="check-circle" size={48} color={colors.secondary} />
           <AppText variant="headlineLg" color={colors.primary} align="center">
             أتممت الورد بحمد الله
           </AppText>
           <AppText variant="bodySm" color={colors.onSurfaceVariant} align="center">
-            أكملت {toEasternNumerals(total)} أذكار في {subcategory?.title}
+            أكملت {toEasternNumerals(total)} أذكار في {subcategory?.title ?? subcategoryTitle}
           </AppText>
-          <Pressable style={styles.primaryBtn} onPress={() => router.back()}>
+          <Pressable style={styles.primaryBtn} onPress={navigateBack}>
             <AppText variant="labelLg" color={colors.onPrimary} align="center">
               العودة للأقسام
             </AppText>
@@ -110,8 +121,15 @@ export function DhikrReadScreen({
   }
 
   return (
-    <View style={styles.page}>
+    <View style={safePageStyle}>
       <View style={styles.toolbar}>
+        <Pressable
+          style={styles.iconBtn}
+          accessibilityLabel="رجوع"
+          onPress={() => setExitOpen(true)}
+        >
+          <Icon name="arrow-forward" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
         <View style={styles.chip}>
           <Icon name="spa" size={16} color={colors.primary} />
           <AppText variant="labelMd" color={colors.onSurface}>
@@ -252,7 +270,7 @@ export function DhikrReadScreen({
         cancelLabel="البقاء ومتابعة الذكر"
         onConfirm={() => {
           setExitOpen(false);
-          router.back();
+          navigateBack();
         }}
         onCancel={() => setExitOpen(false)}
       />

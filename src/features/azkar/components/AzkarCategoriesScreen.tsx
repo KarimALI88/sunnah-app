@@ -7,7 +7,7 @@ import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { AppText } from "@/components/ui/AppText";
 import { Icon } from "@/components/ui/Icon";
-import { useCategory, useSubcategories } from "@/features/azkar/hooks/useAzkar";
+import { useCategories, useSubcategories } from "@/features/azkar/hooks/useAzkar";
 import type { Subcategory } from "@/features/azkar/types";
 import { Screen } from "@/layouts/Screen";
 import { colors, radii, spacing } from "@/theme";
@@ -20,13 +20,9 @@ const toneColor = {
 };
 
 export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
-  const {
-    data: category,
-    isLoading: catLoading,
-    isError,
-    refetch,
-  } = useCategory(categoryId);
-  const { data: items, isLoading } = useSubcategories(categoryId);
+  const { data: categories, isLoading: catLoading, isError: categoryError, refetch: refetchCategories } = useCategories();
+  const { data: items, isLoading, isError, refetch } = useSubcategories(categoryId);
+  const category = categories?.find((item) => item.id === categoryId);
   const [query, setQuery] = useState("");
 
   const filtered = useMemo(() => {
@@ -38,7 +34,7 @@ export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
   }, [items, query]);
 
   if (catLoading || isLoading) return <LoadingState />;
-  if (isError) return <ErrorState onRetry={refetch} />;
+  if (isError || categoryError) return <ErrorState onRetry={() => { void refetch(); void refetchCategories(); }} />;
 
   return (
     <Screen>
@@ -51,6 +47,16 @@ export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
             {toEasternNumerals(items?.length ?? 0)} أقسام رئيسية
           </AppText>
         </View>
+        <Pressable
+          accessibilityLabel="رجوع"
+          onPress={() => {
+            if (router.canGoBack()) router.back();
+            else router.replace('/(tabs)');
+          }}
+          style={styles.backButton}
+        >
+          <Icon name="arrow-forward" size={22} color={colors.primary} />
+        </Pressable>
       </View>
       <View style={styles.searchWrap}>
         <Icon name="search" size={20} color={colors.outline} />
@@ -68,7 +74,7 @@ export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
         <Pressable
           style={styles.banner}
           onPress={() =>
-            router.push(`/azkar/read/0?subcategoryId=${items[0].id}`)
+            router.push({ pathname: "/azkar/read/[dhikrId]", params: { dhikrId: "0", subcategoryId: items[0].id, categoryId, subcategoryTitle: items[0].title } })
           }
         >
           <View style={{ flex: 1 }}>
@@ -132,9 +138,7 @@ function SubcategoryCard({ item }: { item: Subcategory }) {
   return (
     <Pressable
       style={styles.card}
-      onPress={() =>
-        router.push(`/azkar/read/${item.id}-1?subcategoryId=${item.id}`)
-      }
+      onPress={() => router.push({ pathname: "/azkar/read/[dhikrId]", params: { dhikrId: "0", subcategoryId: item.id, categoryId: item.categoryId, subcategoryTitle: item.title } })}
     >
       <View style={styles.cardTop}>
         <View
@@ -164,6 +168,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  backButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: colors.surfaceContainerLow,
+    alignItems: "center",
+    justifyContent: "center",
   },
   badge: {
     backgroundColor: "rgba(255,219,148,0.4)",

@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { ConfirmDialog } from '@/components/feedback/ConfirmDialog';
+import { ErrorState } from '@/components/feedback/ErrorState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { AppHeader } from '@/components/shared/AppHeader';
@@ -15,7 +16,7 @@ import { colors, radii, spacing } from '@/theme';
 import { toEasternNumerals } from '@/utils/numerals';
 
 export function WirdScreen() {
-  const { data: wirds, isLoading, refetch } = useWirds();
+  const { data: wirds, isLoading, isError, refetch } = useWirds();
   const { create, increment, reset, remove, update } = useWirdMutations();
   const [modalOpen, setModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<WirdItem | null>(null);
@@ -24,7 +25,8 @@ export function WirdScreen() {
 
   const handleIncrement = (id: string) => {
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    increment.mutate(id);
+    const item = (wirds ?? []).find((wird) => wird.id === id);
+    if (item) increment.mutate(item);
   };
 
   const handleOpenCreate = () => {
@@ -39,13 +41,18 @@ export function WirdScreen() {
 
   const handleSubmit = (draft: WirdDraft) => {
     if (editingItem) {
-      update.mutate({ id: editingItem.id, patch: draft });
+      update.mutate({ id: editingItem.id, patch: draft }, {
+        onError: (error) => Alert.alert('تعذر حفظ الورد', error.message),
+      });
     } else {
-      create.mutate(draft);
+      create.mutate(draft, {
+        onError: (error) => Alert.alert('تعذر إضافة الورد', error.message),
+      });
     }
   };
 
   if (isLoading) return <LoadingState label="جاري تحميل الأوراد..." />;
+  if (isError) return <ErrorState onRetry={() => { void refetch(); }} />;
 
   const list = wirds ?? [];
   const totalCount = list.reduce((acc, curr) => acc + curr.currentCount, 0);
@@ -226,6 +233,7 @@ export function WirdScreen() {
 
       {/* Create / Edit Modal */}
       <CreateWirdModal
+        key={modalOpen ? editingItem?.id ?? 'new' : 'closed'}
         visible={modalOpen}
         onClose={() => {
           setModalOpen(false);
@@ -258,7 +266,8 @@ export function WirdScreen() {
         confirmLabel="نعم، تصفير"
         cancelLabel="تراجع"
         onConfirm={() => {
-          if (resetId) reset.mutate(resetId);
+          const item = list.find((wird) => wird.id === resetId);
+          if (item) reset.mutate(item);
           setResetId(null);
         }}
         onCancel={() => setResetId(null)}

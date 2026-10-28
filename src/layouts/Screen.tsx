@@ -16,7 +16,10 @@ export function Screen({ children, scroll = true, padded = true, bottomInset = 1
   const contentStyle = [
     styles.content,
     padded && { paddingHorizontal: spacing.margin },
-    { paddingBottom: bottomInset + insets.bottom, paddingTop: 8 },
+    {
+      paddingBottom: bottomInset + insets.bottom,
+      paddingTop: insets.top + 8,
+    },
   ];
 
   if (scroll) {

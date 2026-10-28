@@ -3,13 +3,12 @@ import { Tabs } from 'expo-router';
 import { AppTabBar } from '@/components/shared/AppTabBar';
 
 export const unstable_settings = {
-  anchor: 'main',
+  anchor: 'index',
 };
 
 export default function TabLayout() {
   return (
     <Tabs
-      initialRouteName="main"
       tabBar={(props) => <AppTabBar {...props} />}
       screenOptions={{
         headerShown: false,
@@ -17,7 +16,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'الأقسام',
+          title: 'الرئيسية',
         }}
       />
       <Tabs.Screen
@@ -27,9 +26,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="main"
+        name="categories"
         options={{
-          title: 'الرئيسية',
+          title: 'الأقسام',
         }}
       />
       <Tabs.Screen

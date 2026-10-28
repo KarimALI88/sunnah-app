@@ -1,5 +1,3 @@
-import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
-import { router } from 'expo-router';
 import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -8,14 +6,19 @@ import { Icon } from '@/components/ui/Icon';
 import { colors } from '@/theme';
 
 const tabs = [
-  { name: 'index', label: 'الأقسام', icon: 'grid-view' as const },
+  { name: 'categories', label: 'الأقسام', icon: 'grid-view' as const },
   { name: 'prayer-times', label: 'الصلوات', icon: 'schedule' as const },
-  { name: 'main', label: 'الرئيسية', icon: 'star' as const, center: true },
+  { name: 'index', label: 'الرئيسية', icon: 'star' as const, center: true },
   { name: 'qibla', label: 'القبلة', icon: 'explore' as const },
   { name: 'settings', label: 'الإعدادات', icon: 'settings' as const },
 ];
 
-export function AppTabBar({ state, navigation }: BottomTabBarProps) {
+interface AppTabBarProps {
+  state: { routes: { key: string; name: string }[]; index: number };
+  navigateToTab: (routeKey: string) => void;
+}
+
+export function AppTabBar({ state, navigateToTab }: AppTabBarProps) {
   const insets = useSafeAreaInsets();
 
   return (
@@ -32,12 +35,12 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
               <Pressable
                 key={tab.name}
                 accessibilityLabel="الرئيسية"
-                onPress={() => router.navigate(`/(tabs)/${route.name}`)}
+                onPress={() => navigateToTab(route.key)}
                 style={styles.centerWrap}>
                 <View style={[styles.centerBtn, focused && styles.centerBtnActive]}>
                   <View style={styles.centerInner}>
                     <Image
-                      source={require('@/assets/images/sunnah-icon.png')}
+                      source={require('../../../assets/images/sunnah-transparent.png')}
                       style={styles.centerImg}
                       resizeMode="contain"
                     />
@@ -58,7 +61,7 @@ export function AppTabBar({ state, navigation }: BottomTabBarProps) {
             <Pressable
               key={tab.name}
               accessibilityLabel={tab.label}
-              onPress={() => router.navigate(`/(tabs)/${route.name}`)}
+              onPress={() => navigateToTab(route.key)}
               style={styles.item}>
               <Icon
                 name={tab.icon}

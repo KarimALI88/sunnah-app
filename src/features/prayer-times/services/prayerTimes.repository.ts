@@ -1,6 +1,6 @@
 import { apiRequest } from '@/api/client';
 import { endpoints } from '@/api/endpoints';
-import { DEFAULT_LOCATION, getDeviceLocation } from '@/features/prayer-times/services/location.service';
+import { getDeviceLocation } from '@/features/prayer-times/services/location.service';
 import type { PrayerDay, PrayerId, PrayerTime } from '@/features/prayer-times/types';
 import { pad2, toEasternNumerals } from '@/utils/numerals';
 
@@ -124,8 +124,9 @@ export interface PrayerTimesRepository {
 
 export const prayerTimesRepository: PrayerTimesRepository = {
   async getToday() {
-    const location = (await getDeviceLocation()) ?? DEFAULT_LOCATION;
-    const timezone = location.timezone || DEFAULT_LOCATION.timezone;
+    const location = await getDeviceLocation();
+    if (!location) throw new Error('Location permission is required to load local prayer times.');
+    const timezone = location.timezone;
 
     const response = await apiRequest<PrayerTimesApiResponse>(endpoints.prayerTimes, {
       query: {

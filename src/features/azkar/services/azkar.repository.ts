@@ -7,10 +7,25 @@ import type {
   ApiSubcategory,
   DhikrDetailResponse,
   PaginatedResponse,
-  SingleResponse,
 } from '@/features/azkar/types/api';
 
 const PER_PAGE = 20;
+
+async function getAllPages<T>(path: string): Promise<T[]> {
+  const firstPage = await apiRequest<PaginatedResponse<T>>(path, {
+    query: { page: 1, per_page: PER_PAGE },
+  });
+  if (firstPage.meta.last_page <= 1) return firstPage.data;
+
+  const remainingPages = await Promise.all(
+    Array.from({ length: firstPage.meta.last_page - 1 }, (_, index) =>
+      apiRequest<PaginatedResponse<T>>(path, {
+        query: { page: index + 2, per_page: PER_PAGE },
+      }),
+    ),
+  );
+  return [firstPage.data, ...remainingPages.map((page) => page.data)].flat();
+}
 
 function mapCategory(item: ApiCategory): Category {
   return {
@@ -55,9 +70,7 @@ function mapDhikr(item: ApiDhikr): Dhikr {
 
 export interface AzkarRepository {
   getCategories(): Promise<Category[]>;
-  getCategory(categoryId: string): Promise<Category | undefined>;
   getSubcategories(categoryId: string): Promise<Subcategory[]>;
-  getSubcategory(subcategoryId: string): Promise<Subcategory | undefined>;
   getDhikrs(subcategoryId: string): Promise<Dhikr[]>;
   getDhikr(dhikrId: string): Promise<Dhikr | undefined>;
   searchSubcategories(query: string): Promise<Subcategory[]>;
@@ -65,37 +78,18 @@ export interface AzkarRepository {
 
 export const azkarRepository: AzkarRepository = {
   async getCategories() {
-    const response = await apiRequest<PaginatedResponse<ApiCategory>>(endpoints.categories, {
-      query: { page: 1, per_page: PER_PAGE },
-    });
-    return response.data.map(mapCategory);
-  },
-
-  async getCategory(categoryId) {
-    const response = await apiRequest<SingleResponse<ApiCategory>>(endpoints.category(categoryId));
-    return response.data ? mapCategory(response.data) : undefined;
+    const categories = await getAllPages<ApiCategory>(endpoints.categories);
+    return categories.map(mapCategory);
   },
 
   async getSubcategories(categoryId) {
-    const response = await apiRequest<PaginatedResponse<ApiSubcategory>>(
-      endpoints.subcategories(categoryId),
-      { query: { page: 1, per_page: PER_PAGE } },
-    );
-    return response.data.map(mapSubcategory);
-  },
-
-  async getSubcategory(subcategoryId) {
-    const response = await apiRequest<SingleResponse<ApiSubcategory>>(
-      endpoints.subcategory(subcategoryId),
-    );
-    return response.data ? mapSubcategory(response.data) : undefined;
+    const subcategories = await getAllPages<ApiSubcategory>(endpoints.subcategories(categoryId));
+    return subcategories.map(mapSubcategory);
   },
 
   async getDhikrs(subcategoryId) {
-    const response = await apiRequest<PaginatedResponse<ApiDhikr>>(endpoints.dhikrs(subcategoryId), {
-      query: { page: 1, per_page: PER_PAGE },
-    });
-    return response.data.map(mapDhikr);
+    const dhikrs = await getAllPages<ApiDhikr>(endpoints.dhikrs(subcategoryId));
+    return dhikrs.map(mapDhikr);
   },
 
   async getDhikr(dhikrId) {
@@ -107,18 +101,12 @@ export const azkarRepository: AzkarRepository = {
     const q = query.trim();
     if (!q) return [];
 
-    const categoriesResponse = await apiRequest<PaginatedResponse<ApiCategory>>(endpoints.categories, {
-      query: { page: 1, per_page: PER_PAGE },
-    });
+    const categories = await getAllPages<ApiCategory>(endpoints.categories);
 
-    const all: Subcategory[] = [];
-    for (const category of categoriesResponse.data) {
-      const subcategoriesResponse = await apiRequest<PaginatedResponse<ApiSubcategory>>(
-        endpoints.subcategories(category.id),
-        { query: { page: 1, per_page: PER_PAGE } },
-      );
-      all.push(...subcategoriesResponse.data.map(mapSubcategory));
-    }
+    const groups = await Promise.all(categories.map((category) =>
+      getAllPages<ApiSubcategory>(endpoints.subcategories(category.id)),
+    ));
+    const all: Subcategory[] = groups.flatMap((items) => items.map(mapSubcategory));
 
     return all.filter((item) => item.title.includes(q) || item.meta.includes(q));
   },

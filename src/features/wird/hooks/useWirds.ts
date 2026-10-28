@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { wirdRepository } from '@/features/wird/services/wird.repository';
-import type { WirdDraft } from '@/features/wird/types';
+import type { WirdDraft, WirdItem } from '@/features/wird/types';
+import { useIdentity } from '@/providers/IdentityProvider';
 
 export const wirdKeys = {
   all: ['wirds'] as const,
@@ -9,23 +10,28 @@ export const wirdKeys = {
 };
 
 export function useWirds() {
+  const { ready, identity } = useIdentity();
   return useQuery({
     queryKey: wirdKeys.all,
     queryFn: () => wirdRepository.list(),
+    enabled: ready && Boolean(identity?.guest_token),
   });
 }
 
 export function useWird(id: string) {
+  const { ready, identity } = useIdentity();
   return useQuery({
     queryKey: wirdKeys.detail(id),
     queryFn: () => wirdRepository.get(id),
-    enabled: Boolean(id),
+    enabled: ready && Boolean(identity?.guest_token) && Boolean(id),
   });
 }
 
 export function useWirdMutations() {
   const client = useQueryClient();
-  const invalidate = () => client.invalidateQueries({ queryKey: wirdKeys.all });
+  const invalidate = () => {
+    void client.invalidateQueries({ queryKey: wirdKeys.all });
+  };
 
   const create = useMutation({
     mutationFn: (draft: WirdDraft) => wirdRepository.create(draft),
@@ -42,12 +48,20 @@ export function useWirdMutations() {
     onSuccess: invalidate,
   });
   const increment = useMutation({
-    mutationFn: (id: string) => wirdRepository.increment(id),
-    onSuccess: invalidate,
+    mutationFn: (item: WirdItem) => wirdRepository.increment(item),
+    onSuccess: (updated) => {
+      client.setQueryData<WirdItem[]>(wirdKeys.all, (items) =>
+        items?.map((item) => item.id === updated.id ? updated : item),
+      );
+    },
   });
   const reset = useMutation({
-    mutationFn: (id: string) => wirdRepository.reset(id),
-    onSuccess: invalidate,
+    mutationFn: (item: WirdItem) => wirdRepository.reset(item),
+    onSuccess: (updated) => {
+      client.setQueryData<WirdItem[]>(wirdKeys.all, (items) =>
+        items?.map((item) => item.id === updated.id ? updated : item),
+      );
+    },
   });
   const remove = useMutation({
     mutationFn: (id: string) => wirdRepository.remove(id),

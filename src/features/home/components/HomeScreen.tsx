@@ -1,11 +1,14 @@
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
 import { Icon } from '@/components/ui/Icon';
+import { LocationAccessPrompt } from '@/components/shared/LocationAccessPrompt';
 import { useCategories } from '@/features/azkar/hooks/useAzkar';
 import { dailyReflection } from '@/features/home/data/home.mock';
 import { useUpcomingPrayer } from '@/features/prayer-times/hooks/usePrayerTimes';
+import { useLocationRefresh } from '@/features/prayer-times/hooks/useLocationRefresh';
 import { useWirdMutations, useWirds } from '@/features/wird/hooks/useWirds';
 import { formatCountdown, toEasternNumerals } from '@/utils/numerals';
 import { colors, radii, spacing } from '@/theme';
@@ -20,15 +23,17 @@ const compactIcons = {
 } as const;
 
 export function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const { data: categories } = useCategories();
-  const { data: day, upcoming } = useUpcomingPrayer();
+  const { data: day, upcoming, isLoading: prayerTimesLoading } = useUpcomingPrayer();
+  const locationRefresh = useLocationRefresh();
   const { data: wirds } = useWirds();
   const { increment } = useWirdMutations();
 
   return (
     <ScrollView
       style={styles.flex}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[styles.content, { paddingTop: insets.top + spacing.sm }]}
       showsVerticalScrollIndicator={false}>
       <View style={styles.greeting}>
         <View>
@@ -38,19 +43,34 @@ export function HomeScreen() {
           <View style={styles.metaRow}>
             <Icon name="event" size={16} color={colors.secondary} />
             <AppText variant="labelMd" color={colors.onSurfaceVariant}>
-              {day?.hijriDate ?? '١٤ رمضان ١٤٤٦ هـ'}
+              {day?.hijriDate ?? '—'}
             </AppText>
             <View style={styles.dot} />
             <Icon name="place" size={16} color={colors.secondary} />
             <AppText variant="labelMd" color={colors.onSurfaceVariant}>
-              {day?.city ?? 'الرياض'}
+              {day?.city ?? '—'}
             </AppText>
           </View>
         </View>
         <View style={styles.roundIcon}>
-          <Icon name="wb-sunny" size={20} color={colors.primaryContainer} />
+          <Image
+            source={require('../../../../assets/images/sunnah-transparent.png')}
+            style={styles.homeLogo}
+            resizeMode="contain"
+            accessibilityLabel="شعار سنة"
+          />
         </View>
       </View>
+
+      {!day && !prayerTimesLoading ? (
+        <LocationAccessPrompt
+          isRefreshing={locationRefresh.isRefreshing}
+          needsSettings={locationRefresh.needsSettings}
+          error={locationRefresh.error}
+          onRequestLocation={locationRefresh.requestCurrentLocation}
+          onOpenSettings={locationRefresh.openSettings}
+        />
+      ) : null}
 
       <Pressable style={styles.hero} onPress={() => router.push('/(tabs)/prayer-times')}>
         <View style={styles.heroTop}>
@@ -70,10 +90,10 @@ export function HomeScreen() {
         <View style={styles.heroBody}>
           <View>
             <AppText variant="displayLg" color={colors.onPrimary}>
-              صلاة {upcoming?.prayer.name ?? 'العصر'}
+              صلاة {upcoming?.prayer.name ?? '—'}
             </AppText>
             <AppText variant="bodySm" color={colors.onPrimaryContainer}>
-              موعد الأذان: {upcoming?.prayer.timeLabel ?? '٤:٣٠ م'}
+              موعد الأذان: {upcoming?.prayer.timeLabel ?? '—'}
             </AppText>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
@@ -138,7 +158,7 @@ export function HomeScreen() {
         </AppText>
       </View>
       <View style={styles.grid}>
-        {(categories ?? []).map((category) => (
+        {(categories ?? []).filter((category) => category.id !== 'allah-names').map((category) => (
           <Pressable
             key={category.id}
             style={styles.service}
@@ -176,6 +196,20 @@ export function HomeScreen() {
             </AppText>
           </Pressable>
         ))}
+        <Pressable
+          style={styles.service}
+          accessibilityRole="button"
+          onPress={() => router.push('/allah-names')}>
+          <View style={[styles.serviceIcon, { backgroundColor: colors.surfaceContainer }]}>
+            <Icon name="auto-awesome" size={24} color={colors.secondary} />
+          </View>
+          <AppText variant="labelLg" color={colors.primary}>
+            أسماء الله الحسنى
+          </AppText>
+          <AppText variant="labelSm" color={colors.onSurfaceVariant}>
+            ٩٩ اسماً مباركاً
+          </AppText>
+        </Pressable>
       </View>
 
       <View style={styles.sectionHead}>
@@ -205,7 +239,7 @@ export function HomeScreen() {
           <Pressable
             key={wird.id}
             style={styles.wirdCard}
-            onPress={() => increment.mutate(wird.id)}
+            onPress={() => increment.mutate(wird)}
             onLongPress={() => router.push('/(tabs)/wird')}>
             <View style={styles.wirdTop}>
               <View style={styles.metaRow}>
@@ -292,6 +326,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  homeLogo: {
+    width: 40,
+    height: 40,
+  },
   hero: {
     backgroundColor: colors.primaryContainer,
     borderRadius: radii.lg,
@@ -349,6 +387,7 @@ const styles = StyleSheet.create({
     borderRadius: radii.md,
     alignItems: 'center',
     justifyContent: 'center',
+    alignSelf: 'flex-end',
     marginBottom: 8,
   },
   countBadge: {

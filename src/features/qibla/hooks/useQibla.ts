@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import {
   buildFallbackReading,
@@ -8,6 +8,7 @@ import {
 } from '@/features/qibla/services/qibla.service';
 import type { QiblaReading } from '@/features/qibla/types';
 import { normalizeAngle, qiblaBearing } from '@/features/qibla/utils/bearing';
+import { subscribeToLocationRefresh } from '@/lib/locationRefreshEvents';
 
 const initial: QiblaReading = {
   status: 'idle',
@@ -22,10 +23,13 @@ const initial: QiblaReading = {
 
 export function useQibla() {
   const [reading, setReading] = useState<QiblaReading>(initial);
+  const headingSubscription = useRef<(() => void) | null>(null);
 
   const start = useCallback(async () => {
-    setReading((prev) => ({ ...prev, status: 'requesting-permission' }));
+    headingSubscription.current?.();
+    headingSubscription.current = null;
     const granted = await requestQiblaPermissions().catch(() => false);
+    setReading((prev) => ({ ...prev, status: 'requesting-permission' }));
     if (!granted) {
       setReading({
         ...buildFallbackReading(),
@@ -73,16 +77,27 @@ export function useQibla() {
         };
       });
     });
+    headingSubscription.current = unsubscribe;
 
     return unsubscribe;
   }, []);
 
   useEffect(() => {
-    let cleanup: undefined | (() => void);
-    start().then((unsub) => {
-      cleanup = unsub;
-    });
-    return () => cleanup?.();
+    let active = true;
+    const refresh = () => {
+      void start().then((unsubscribe) => {
+        if (!active) unsubscribe?.();
+      });
+    };
+
+    refresh();
+    const unsubscribeLocationRefresh = subscribeToLocationRefresh(refresh);
+    return () => {
+      active = false;
+      unsubscribeLocationRefresh();
+      headingSubscription.current?.();
+      headingSubscription.current = null;
+    };
   }, [start]);
 
   return { reading, retry: start };

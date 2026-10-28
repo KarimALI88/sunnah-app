@@ -9,7 +9,6 @@ export interface AllahNamesRepository {
 
 export const allahNamesRepository: AllahNamesRepository = {
   async list() {
-    await new Promise((resolve) => setTimeout(resolve, 140));
     return allahNames;
   },
   async get(id) {

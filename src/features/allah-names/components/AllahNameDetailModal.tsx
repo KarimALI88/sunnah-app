@@ -67,7 +67,7 @@ export function AllahNameDetailModal({ name, visible, onClose }: Props) {
           {/* Spiritual Reflection */}
           <View style={styles.verseQuote}>
             <AppText variant="labelSm" color={colors.primary} style={{ fontStyle: 'italic' }}>
-              "وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا"
+              &ldquo;وَلِلَّهِ الْأَسْمَاءُ الْحُسْنَىٰ فَادْعُوهُ بِهَا&rdquo;
             </AppText>
           </View>
 
@@ -92,7 +92,7 @@ const styles = StyleSheet.create({
     padding: spacing.margin,
   },
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
   },
   card: {
     width: '100%',

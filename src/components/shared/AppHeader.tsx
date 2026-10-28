@@ -28,7 +28,10 @@ export function AppHeader({
           {showBack ? (
             <Pressable
               accessibilityLabel="رجوع"
-              onPress={() => router.back()}
+              onPress={() => {
+                if (router.canGoBack()) router.back();
+                else router.replace('/(tabs)');
+              }}
               style={styles.iconBtn}>
               <Icon name="arrow-forward" size={24} color={colors.onSurface} />
             </Pressable>

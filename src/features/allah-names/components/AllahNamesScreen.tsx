@@ -70,7 +70,7 @@ export function AllahNamesScreen() {
 
   return (
     <View style={styles.container}>
-      <AppHeader title="أسماء الله الحسنى" subtitle="٩٩ اسماً مباركاً" showBrand={true} />
+      <AppHeader title="أسماء الله الحسنى" subtitle="٩٩ اسماً مباركاً" showBack showBrand={false} />
 
       {/* Header Search Section */}
       <View style={styles.searchSection}>

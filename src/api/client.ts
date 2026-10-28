@@ -6,7 +6,7 @@
  *   would hit the Metro dev server and return HTML instead of JSON).
  * - Attaches `Authorization: Bearer <guest_token>` from AsyncStorage when a
  *   token has been stored (the guest identity flow writes it on first launch).
- * - Logs every request, response and error to the console.
+ * - Logs request metadata without logging response bodies or credentials.
  */
 
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -23,6 +23,8 @@ export interface RequestOptions {
   query?: Record<string, QueryValue>;
   /** Attach the stored bearer token. Defaults to `true`. */
   auth?: boolean;
+  /** Additional headers for APIs that use a custom guest-token header. */
+  headers?: Record<string, string>;
 }
 
 const FALLBACK_BASE_URL = "https://athkar-be.ofx-qrcode.com";
@@ -60,21 +62,16 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { method = "GET", body, query, auth = true } = options;
+  const { method = "GET", body, query, auth = true, headers: extraHeaders } = options;
   const url = `${API_BASE_URL}${path}${buildQuery(query)}`;
 
   const headers: Record<string, string> = { Accept: "application/json" };
+  Object.assign(headers, extraHeaders);
   if (body !== undefined) headers["Content-Type"] = "application/json";
   if (auth) {
     const token = await readGuestToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
-
-  console.log(`[API] → ${method} ${url}`, body !== undefined ? body : "");
-  console.log("[API] → headers", {
-    ...headers,
-    Authorization: headers.Authorization ? "Bearer ***" : undefined,
-  });
 
   try {
     const response = await fetch(url, {
@@ -86,10 +83,10 @@ export async function apiRequest<T>(
     const contentType = response.headers.get("content-type") ?? "";
     const text = await response.text();
 
-    console.log(`[API] ← ${response.status} ${method} ${url}`);
+    if (__DEV__) console.log(`[API] ${method} ${path} → ${response.status}`);
 
     if (!contentType.includes("application/json")) {
-      console.error(`[API] Non-JSON response for ${method} ${url}`, {
+      console.error(`[API] Non-JSON response for ${method} ${path}`, {
         status: response.status,
         contentType,
         preview: text.slice(0, 200),
@@ -104,14 +101,13 @@ export async function apiRequest<T>(
     if (!response.ok) {
       const message =
         json?.message ?? `Request failed with status ${response.status}`;
-      console.error(`[API] ✗ ${method} ${url}`, json);
+      console.error(`[API] Request rejected: ${method} ${path} (${response.status})`);
       throw new Error(message);
     }
 
-    console.log(`[API] ✓ ${method} ${url}`, json);
     return json as T;
   } catch (error) {
-    console.error(`[API] Request failed ${method} ${url}:`, error);
+    if (__DEV__) console.error(`[API] Request failed ${method} ${path}:`, error);
     throw error;
   }
 }

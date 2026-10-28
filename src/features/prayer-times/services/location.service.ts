@@ -11,12 +11,7 @@ export interface DeviceLocation {
   country?: string;
 }
 
-/** Fallback used when location permission is denied (example coordinates). */
-export const DEFAULT_LOCATION: DeviceLocation = {
-  latitude: 30.0444,
-  longitude: 31.2357,
-  timezone: "Africa/Cairo",
-};
+const DEFAULT_TIMEZONE = "Africa/Cairo";
 
 const CACHE_TTL = 1000 * 60 * 60; // 1 hour
 
@@ -31,22 +26,27 @@ export function getDeviceTimezone(): string {
   } catch (error) {
     console.warn("[Location] Could not resolve device timezone:", error);
   }
-  return DEFAULT_LOCATION.timezone;
+  return DEFAULT_TIMEZONE;
 }
 
-let permissionRequest: Promise<boolean> | null = null;
+export interface LocationPermissionResult {
+  granted: boolean;
+  canAskAgain: boolean;
+}
 
-async function doRequestLocationPermission(): Promise<boolean> {
+let permissionRequest: Promise<LocationPermissionResult> | null = null;
+
+async function doRequestLocationPermission(): Promise<LocationPermissionResult> {
   try {
     const current = await Location.getForegroundPermissionsAsync();
-    if (current.status === "granted") return true;
+    if (current.granted) return { granted: true, canAskAgain: current.canAskAgain };
+    if (!current.canAskAgain) return { granted: false, canAskAgain: false };
 
     const requested = await Location.requestForegroundPermissionsAsync();
-    console.log("[Location] Foreground permission status:", requested.status);
-    return requested.status === "granted";
+    return { granted: requested.granted, canAskAgain: requested.canAskAgain };
   } catch (error) {
     console.error("[Location] Permission request failed:", error);
-    return false;
+    return { granted: false, canAskAgain: true };
   }
 }
 
@@ -55,13 +55,17 @@ async function doRequestLocationPermission(): Promise<boolean> {
  * Concurrent callers share a single in-flight request so the OS prompt is
  * only shown once.
  */
-export function requestLocationPermission(): Promise<boolean> {
+export function requestLocationAccess(): Promise<LocationPermissionResult> {
   if (!permissionRequest) {
     permissionRequest = doRequestLocationPermission().finally(() => {
       permissionRequest = null;
     });
   }
   return permissionRequest;
+}
+
+export async function requestLocationPermission(): Promise<boolean> {
+  return (await requestLocationAccess()).granted;
 }
 
 async function readCache(): Promise<DeviceLocation | null> {
@@ -82,23 +86,27 @@ async function readCache(): Promise<DeviceLocation | null> {
 
 /**
  * Resolve the device location (with a 1 hour AsyncStorage cache).
- * Returns `null` when permission is denied or the position cannot be read.
+ * Permission prompts are user initiated at app launch or from the recovery
+ * action; this function waits for an in-flight launch prompt and never opens
+ * another prompt from a background query.
  */
 export async function getDeviceLocation(options?: {
   force?: boolean;
 }): Promise<DeviceLocation | null> {
+  const permission = permissionRequest
+    ? await permissionRequest
+    : await Location.getForegroundPermissionsAsync();
+  if (!permission.granted) {
+    console.warn("[Location] Permission not granted — location unavailable");
+    return null;
+  }
+
   if (!options?.force) {
     const cached = await readCache();
     if (cached) {
       console.log("[Location] Using cached location:", cached);
       return cached;
     }
-  }
-
-  const granted = await requestLocationPermission();
-  if (!granted) {
-    console.warn("[Location] Permission not granted — location unavailable");
-    return null;
   }
 
   try {

@@ -1,52 +1,33 @@
-# API Integration Plan — Sakinah App
+# Backend integration
 
-Base URL: `https://athkar-be.ofx-qrcode.com` (from `EXPO_PUBLIC_API_BASE_URL`, with a hard fallback so a missing env var can never produce a relative URL / HTML response).
+Base URL: `EXPO_PUBLIC_API_BASE_URL` (fallback: `https://athkar-be.ofx-qrcode.com`).
 
-All requests log to the console: `[API] → METHOD url`, `[API] ← status`, full JSON response on success, and `[API] Request failed …` on error.
+## Guest identity
 
-## 1. HTTP client — `src/api/client.ts`
+`IdentityProvider` calls `ensureGuestIdentity()` once when the app opens, before rendering API-backed screens. The service reuses both `@sakinah:identity_id` and `@sakinah:guest_token` when present; if either is missing it sends an unauthenticated `POST /api/v1/guest/identities`, validates the response, and stores both values in AsyncStorage. Authenticated requests attach the stored bearer token. Request logging does not print response bodies or credentials.
 
-- Real `fetch` wrapper: `apiRequest<T>(path, { method, body, query, auth })`.
-- Injects `Authorization: Bearer <guest_token>` from AsyncStorage by default (skipped automatically when no token is stored yet).
-- Sends `Accept: application/json` (so Laravel returns JSON errors, not HTML).
-- Non-JSON guard: if the response is not JSON, throw a clear error instead of a cryptic `SyntaxError`.
+## Prayer times and location
 
-## 2. Endpoints — `src/api/endpoints.ts`
+The app checks foreground location permission on launch. Before reading a cached position or requesting a fresh one, the location service checks permission again. The prayer-times repository requests:
 
-```
-guestIdentities  POST /api/v1/guest/identities
-categories       GET  /api/v1/categories?page=1&per_page=20
-category(id)     GET  /api/v1/categories/{id}
-subcategories(id) GET /api/v1/categories/{id}/subcategories?page=1&per_page=20
-subcategory(id)  GET  /api/v1/subcategories/{id}
-dhikrs(id)       GET  /api/v1/subcategories/{id}/dhikrs?page=1&per_page=20
-dhikr(id)        GET  /api/v1/dhikrs/{id}
-prayerTimes      GET  /api/v1/prayer-times
-```
+`GET /api/v1/prayer-times?latitude=...&longitude=...&date=YYYY-MM-DD&timezone=...&calculation_method=5&school=0`
 
-## 3. Guest identity flow (first thing on app open)
+When permission or location is unavailable, the request fails instead of showing prayer times for a hard-coded city. Coordinates are cached for one hour; city/country labels are reverse-geocoded where available.
 
-- `ensureGuestIdentity()`: read `@sakinah:identity_id` + `@sakinah:guest_token` from AsyncStorage.
-  - Both present → reuse, **no request**.
-  - Missing → `POST /api/v1/guest/identities`, store both keys, return identity.
-- `IdentityProvider` runs `ensureGuestIdentity()` once on mount and exposes `{ identity, ready, error }`.
+## Dhikr content
 
-## 4. Prayer times (location first)
+- Categories: `GET /api/v1/categories?page=1&per_page=20`
+- Subcategories: `GET /api/v1/categories/{categoryId}/subcategories?page=1&per_page=20`
+- Dhikrs: `GET /api/v1/subcategories/{subcategoryId}/dhikrs?page=1&per_page=20`
+- Single dhikr: `GET /api/v1/dhikrs/{dhikrId}`
 
-- Location is requested as the first thing on app open (root layout) and again (cached 1h) before the prayer-times request.
-- `GET /api/v1/prayer-times?latitude=&longitude=&date=YYYY-MM-DD&timezone=&calculation_method=5&school=0`.
-- Device timezone via `Intl` (`Africa/Cairo` fallback). City/country via `reverseGeocodeAsync`.
-- Map `timings` → existing `PrayerDay` UI shape (prayers + night: midnight / last third).
+The category, subcategory, and dhikr list repositories follow `meta.last_page` so all results are available when a collection spans multiple pages. Response fields map to the existing UI models. Reading routes pass real category/subcategory IDs and subcategory titles through Expo Router; the reader advances through the selected subcategory's API-ordered dhikr list and uses each `repetition_target`.
 
-## 5. Azkar hierarchy
+## Personal wird
 
-- `AzkarRepository` calls the real endpoints and maps API fields to the existing UI types:
-  `title/description/icon_url` → `Category`; `dhikrs_count` → `itemCount`; `text` → `arabicText`; `repetition_target` → `targetCount`; numeric ids → string ids.
-
-## 6. UI wiring (minimal)
-
-- Screens keep their current layout; only real API ids are passed through the routes (no more mock slugs such as `morning-1`).
-
-## 7. Not in scope yet
-
-- Personal wird APIs (to be provided).
+- List: `GET /api/v1/guest/personal-wirds?page=1&per_page=20`
+- Show: `GET /api/v1/guest/personal-wirds/{id}`
+- Create: `POST /api/v1/guest/personal-wirds` with `text` and `target_count`
+- Update: `PUT /api/v1/guest/personal-wirds/{id}` with `text` and `target_count`
+- These guest endpoints use `X-Guest-Token` from the stored guest identity.
+- The API contract provided so far does not include count/reset or delete endpoints. Counter progress and dismissed items therefore remain device-local; they are not synced to the backend.

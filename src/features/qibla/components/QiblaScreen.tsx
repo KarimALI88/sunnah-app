@@ -31,7 +31,7 @@ export function QiblaScreen() {
   }, [isAligned]);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, isAligned && styles.containerAligned]}>
       <AppHeader title="اتجاه القبلة" subtitle="البوصلة الدقيقة" showBrand={true} />
 
       <View style={styles.content}>
@@ -71,14 +71,17 @@ export function QiblaScreen() {
         {/* Degrees and Reading Info */}
         <View style={styles.degreeWrap}>
           <View style={styles.degreeRow}>
-            <AppText variant="displayLg" color={colors.primary}>
+            <AppText variant="displayLg" color={isAligned ? colors.onPrimary : colors.primary}>
               {toEasternNumerals(Math.round(qiblaBearing))}°
             </AppText>
-            <AppText variant="bodyMd" color={colors.onSurfaceVariant} style={{ marginTop: 8 }}>
+            <AppText
+              variant="bodyMd"
+              color={isAligned ? colors.onPrimaryContainer : colors.onSurfaceVariant}
+              style={{ marginTop: 8 }}>
               نحو الكعبة المشرفة
             </AppText>
           </View>
-          <AppText variant="labelSm" color={colors.outline}>
+          <AppText variant="labelSm" color={isAligned ? colors.onPrimaryContainer : colors.outline}>
             زاوية البوصلة الحالية: {toEasternNumerals(Math.round(heading))}°
           </AppText>
         </View>
@@ -236,7 +239,7 @@ export function QiblaScreen() {
 
         {/* Coordinates Footer */}
         <View style={styles.coordsFooter}>
-          <AppText variant="labelSm" color={colors.outline}>
+          <AppText variant="labelSm" color={isAligned ? colors.onPrimaryContainer : colors.outline}>
             إحداثيات الكعبة المشرفة: ٢١.٤٢٢٥° N ، ٣٩.٨٢٦٢° E
           </AppText>
         </View>
@@ -249,6 +252,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.surface,
+  },
+  containerAligned: {
+    backgroundColor: colors.primary,
   },
   content: {
     flex: 1,

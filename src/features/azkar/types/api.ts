@@ -55,11 +55,8 @@ export interface PaginatedResponse<T> {
   meta: PaginationMeta;
 }
 
-export interface SingleResponse<T> {
-  data: T;
-}
-
-export interface DhikrDetailResponse extends SingleResponse<ApiDhikr> {
+export interface DhikrDetailResponse {
+  data: ApiDhikr;
   meta: {
     previous_dhikr_id: number | null;
     next_dhikr_id: number | null;

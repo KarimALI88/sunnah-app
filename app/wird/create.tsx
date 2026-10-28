@@ -9,13 +9,20 @@ export default function CreateWirdRoute() {
 
   const handleSubmit = (draft: WirdDraft) => {
     create.mutate(draft);
-    router.back();
+  };
+
+  const handleClose = () => {
+    if (router.canGoBack()) {
+      router.back();
+      return;
+    }
+    router.replace('/');
   };
 
   return (
     <CreateWirdModal
       visible={true}
-      onClose={() => router.back()}
+      onClose={handleClose}
       onSubmit={handleSubmit}
     />
   );

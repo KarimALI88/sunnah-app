@@ -3,12 +3,12 @@ import { Magnetometer } from 'expo-sensors';
 
 import type { QiblaReading } from '@/features/qibla/types';
 import { headingFromMagnetometer, normalizeAngle, qiblaBearing } from '@/features/qibla/utils/bearing';
+import { requestLocationPermission } from '@/features/prayer-times/services/location.service';
 
 const FALLBACK_RIYADH = { latitude: 24.7136, longitude: 46.6753 };
 
 export async function requestQiblaPermissions(): Promise<boolean> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  return status === 'granted';
+  return requestLocationPermission();
 }
 
 export async function getCurrentCoordinates() {
