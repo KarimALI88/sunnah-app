@@ -11,7 +11,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { useEffect } from "react";
-import { Platform } from "react-native";
+import { I18nManager, Platform } from "react-native";
 import "react-native-reanimated";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
@@ -20,6 +20,10 @@ import { IdentityProvider } from "@/providers/IdentityProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
 import { SettingsProvider } from "@/providers/SettingsProvider";
 import { colors } from "@/theme";
+
+// Keep Arabic layout consistent on every device, regardless of system locale.
+I18nManager.allowRTL(true);
+I18nManager.forceRTL(true);
 
 export { ErrorBoundary } from "expo-router";
 

@@ -1,4 +1,4 @@
-export const APP_NAME = 'سكينة';
+export const APP_NAME = 'سُنَّةُ';
 export const APP_VERSION = '١.٢.٠';
 export const STORAGE_KEYS = {
   wirds: 'sakinah.wirds',

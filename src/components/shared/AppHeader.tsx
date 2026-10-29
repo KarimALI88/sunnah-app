@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
@@ -14,7 +14,7 @@ interface Props {
 }
 
 export function AppHeader({
-  title = 'سكينة',
+  title = 'سُنَّةُ',
   subtitle,
   showBack = false,
   showBrand = true,
@@ -38,9 +38,11 @@ export function AppHeader({
           ) : null}
           {showBrand ? (
             <View style={styles.logo}>
-              <AppText variant="labelLg" color={colors.gold} align="center">
-                س
-              </AppText>
+              <Image
+                source={require('../../../assets/images/sunnah-transparent.png')}
+                style={styles.logoImage}
+                resizeMode="contain"
+              />
             </View>
           ) : null}
           <View>
@@ -109,6 +111,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: colors.gold,
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 28,
+    height: 28,
   },
   avatar: {
     width: 32,

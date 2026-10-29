@@ -4,7 +4,7 @@ import { Platform, StyleSheet, Text, View } from 'react-native';
 export default function ModalScreen() {
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>سكينة</Text>
+      <Text style={styles.title}>سُنَّةُ</Text>
       <Text style={styles.subtitle}>تطبيق إسلامي معاصر للأذكار ومواقيت الصلاة</Text>
       <StatusBar style={Platform.OS === 'ios' ? 'light' : 'auto'} />
     </View>

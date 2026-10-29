@@ -34,6 +34,7 @@ function mapCategory(item: ApiCategory): Category {
     subtitle: item.description ?? '',
     kind: 'azkar',
     icon: 'spa',
+    iconUrl: item.icon_url ?? undefined,
     accent: 'gold',
   };
 }
@@ -46,6 +47,7 @@ function mapSubcategory(item: ApiSubcategory): Subcategory {
     itemCount: item.dhikrs_count ?? 0,
     meta: item.description ?? '',
     icon: 'spa',
+    iconUrl: item.icon_url ?? undefined,
     iconTone: 'teal',
   };
 }

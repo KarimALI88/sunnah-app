@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AppText } from '@/components/ui/AppText';
 import { Icon } from '@/components/ui/Icon';
+import { ApiIcon } from '@/components/ui/ApiIcon';
 import { LocationAccessPrompt } from '@/components/shared/LocationAccessPrompt';
 import { useCategories } from '@/features/azkar/hooks/useAzkar';
 import { dailyReflection } from '@/features/home/data/home.mock';
@@ -174,16 +175,9 @@ export function HomeScreen() {
                 styles.serviceIcon,
                 { backgroundColor: colors.surfaceContainer },
               ]}>
-              <Icon
-                name={
-                  category.id === 'allah-names'
-                    ? 'auto-awesome'
-                    : category.id === 'ruqyah'
-                    ? 'shield'
-                    : category.id === 'duas'
-                    ? 'front-hand'
-                    : 'wb-sunny'
-                }
+              <ApiIcon
+                uri={category.iconUrl}
+                fallback={category.icon as 'spa'}
                 size={24}
                 color={category.accent === 'gold' ? colors.secondary : colors.primaryContainer}
               />

@@ -1,7 +1,8 @@
 import * as Haptics from 'expo-haptics';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,13 +42,14 @@ export function DhikrReadScreen({
   const [activeDhikrId, setActiveDhikrId] = useState(dhikrId);
   const [count, setCount] = useState(0);
   const [exitOpen, setExitOpen] = useState(false);
-  const [audioOpen, setAudioOpen] = useState(false);
   const [doneAll, setDoneAll] = useState(false);
 
   const requestedIndex = list?.findIndex((item) => item.id === activeDhikrId) ?? -1;
   const index = requestedIndex >= 0 ? requestedIndex : 0;
   const dhikr = list?.[index];
   const total = list?.length ?? 0;
+  const audioPlayer = useAudioPlayer(dhikr?.audioUrl ?? null, { updateInterval: 500 });
+  const audioStatus = useAudioPlayerStatus(audioPlayer);
   const complete = dhikr ? isComplete(count, dhikr.targetCount) : false;
   const progress = dhikr ? progressPercent(count, dhikr.targetCount) : 0;
   const offset = C - (progress / 100) * C;
@@ -99,6 +101,19 @@ export function DhikrReadScreen({
     }
   };
 
+  const toggleAudio = () => {
+    if (!dhikr.audioUrl) return;
+    if (audioStatus.playing) {
+      audioPlayer.pause();
+      return;
+    }
+    if (audioStatus.didJustFinish) {
+      void audioPlayer.seekTo(0).then(() => audioPlayer.play());
+      return;
+    }
+    audioPlayer.play();
+  };
+
   if (doneAll) {
     return (
       <View style={safePageStyle}>
@@ -122,7 +137,15 @@ export function DhikrReadScreen({
 
   return (
     <View style={safePageStyle}>
-      <View style={styles.toolbar}>
+      <ScrollView
+        style={styles.verticalScroll}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}>
+      <ScrollView
+        horizontal
+        style={styles.topBarScroll}
+        contentContainerStyle={styles.topBarContent}
+        showsHorizontalScrollIndicator={false}>
         <Pressable
           style={styles.iconBtn}
           accessibilityLabel="رجوع"
@@ -136,27 +159,36 @@ export function DhikrReadScreen({
             {headerLabel}
           </AppText>
         </View>
-        <View style={styles.toolbar}>
-          <Pressable style={styles.audio} onPress={() => setAudioOpen(true)} accessibilityLabel="تشغيل التلاوة الصوتية">
-            <Icon name="volume-up" size={18} color={colors.secondary} />
-            <AppText variant="labelSm" color={colors.secondary}>
-              استماع صوتي
-            </AppText>
-            <View style={styles.live} />
-          </Pressable>
-          <Pressable
-            style={styles.iconBtn}
-            accessibilityLabel="تغيير حجم الخط"
-            onPress={() =>
-              update({ dhikrFontSize: settings.dhikrFontSize >= 26 ? 20 : settings.dhikrFontSize + 4 })
-            }>
-            <Icon name="format-size" size={20} color={colors.onSurface} />
-          </Pressable>
-          <Pressable style={styles.iconBtn} accessibilityLabel="إنهاء الورد" onPress={() => setExitOpen(true)}>
-            <Icon name="close" size={20} color={colors.onSurfaceVariant} />
-          </Pressable>
-        </View>
-      </View>
+        <Pressable
+          style={[styles.audio, !dhikr.audioUrl && styles.audioDisabled]}
+          onPress={toggleAudio}
+          disabled={!dhikr.audioUrl}
+          accessibilityLabel={audioStatus.playing ? 'إيقاف الاستماع' : 'تشغيل التلاوة الصوتية'}
+          accessibilityState={{ disabled: !dhikr.audioUrl }}>
+          <Icon name={audioStatus.playing ? 'pause' : 'volume-up'} size={18} color={colors.secondary} />
+          <AppText variant="labelSm" color={colors.secondary}>
+            {!dhikr.audioUrl
+              ? 'الصوت غير متاح'
+              : audioStatus.isBuffering
+                ? 'جاري تحميل الصوت'
+                : audioStatus.playing
+                  ? 'إيقاف الاستماع'
+                  : 'استماع صوتي'}
+          </AppText>
+          {dhikr.audioUrl && !audioStatus.playing ? <View style={styles.live} /> : null}
+        </Pressable>
+        <Pressable
+          style={styles.iconBtn}
+          accessibilityLabel="تغيير حجم الخط"
+          onPress={() =>
+            update({ dhikrFontSize: settings.dhikrFontSize >= 26 ? 20 : settings.dhikrFontSize + 4 })
+          }>
+          <Icon name="format-size" size={20} color={colors.onSurface} />
+        </Pressable>
+        <Pressable style={styles.iconBtn} accessibilityLabel="إنهاء الورد" onPress={() => setExitOpen(true)}>
+          <Icon name="close" size={20} color={colors.onSurfaceVariant} />
+        </Pressable>
+      </ScrollView>
 
       <View style={styles.card}>
         <View style={styles.cardHead}>
@@ -274,17 +306,18 @@ export function DhikrReadScreen({
         }}
         onCancel={() => setExitOpen(false)}
       />
+      </ScrollView>
 
-      {audioOpen ? (
+      {audioStatus.playing || audioStatus.isBuffering ? (
         <View style={styles.toast}>
           <View style={styles.toolbar}>
             <Icon name="graphic-eq" size={20} color={colors.secondaryFixed} />
             <AppText variant="labelMd" color={colors.onPrimary} style={{ flex: 1 }}>
-              {dhikr.audioLabel ?? 'التلاوة الصوتية غير متصلة بعد في الإصدار الأول'}
+              {audioStatus.isBuffering ? 'جاري تحميل التلاوة...' : dhikr.audioLabel ?? 'التلاوة الصوتية'}
             </AppText>
           </View>
-          <Pressable onPress={() => setAudioOpen(false)}>
-            <Icon name="close" size={18} color={colors.onPrimary} />
+          <Pressable onPress={() => audioPlayer.pause()} accessibilityLabel="إيقاف الاستماع">
+            <Icon name="pause" size={18} color={colors.onPrimary} />
           </Pressable>
         </View>
       ) : null}
@@ -298,8 +331,11 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     paddingHorizontal: spacing.margin,
     paddingBottom: spacing.xl,
-    gap: spacing.md,
   },
+  verticalScroll: { flex: 1, width: '100%' },
+  scrollContent: { gap: spacing.md, paddingBottom: spacing.xl },
+  topBarScroll: { flexGrow: 0, width: '100%' },
+  topBarContent: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 2 },
   toolbar: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   chip: {
     flexDirection: 'row',
@@ -319,6 +355,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     borderRadius: radii.full,
   },
+  audioDisabled: { opacity: 0.55 },
   live: { width: 8, height: 8, borderRadius: 4, backgroundColor: colors.secondary },
   iconBtn: {
     width: 36,

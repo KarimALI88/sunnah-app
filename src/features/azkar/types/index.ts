@@ -6,6 +6,7 @@ export interface Category {
   subtitle: string;
   kind: ContentKind;
   icon: string;
+  iconUrl?: string;
   accent: 'gold' | 'teal';
 }
 
@@ -16,6 +17,7 @@ export interface Subcategory {
   itemCount: number;
   meta: string;
   icon: string;
+  iconUrl?: string;
   iconTone: 'gold' | 'teal' | 'slate';
   progressPercent?: number;
 }

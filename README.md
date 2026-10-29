@@ -1,4 +1,4 @@
-# سكينة (Sakinah) - تطبيق إسلامي معاصر للأذكار ومواقيت الصلاة
+# سُنَّةُ (Sunnah) - تطبيق إسلامي معاصر للأذكار ومواقيت الصلاة
 
 تطبيق إسلامي حديث مبني بأحدث معايير **React Native**, **Expo**, **TypeScript**, **Expo Router**, و **TanStack Query** ومستوحى بنسبة ١٠٠٪ من تصاميم **Google Stitch (Sakinah Spiritual Serenity)**.
 

@@ -7,6 +7,7 @@ import { ErrorState } from "@/components/feedback/ErrorState";
 import { LoadingState } from "@/components/feedback/LoadingState";
 import { AppText } from "@/components/ui/AppText";
 import { Icon } from "@/components/ui/Icon";
+import { ApiIcon } from "@/components/ui/ApiIcon";
 import { useCategories, useSubcategories } from "@/features/azkar/hooks/useAzkar";
 import type { Subcategory } from "@/features/azkar/types";
 import { Screen } from "@/layouts/Screen";
@@ -42,6 +43,16 @@ export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
         <AppText variant="headlineLg" color={colors.primary}>
           {category?.title ?? "الأذكار اليومية"}
         </AppText>
+        {category ? (
+          <View style={[styles.categoryIcon, { backgroundColor: `${toneColor[category.accent]}22` }]}>
+            <ApiIcon
+              uri={category.iconUrl}
+              fallback={category.icon as 'spa'}
+              size={22}
+              color={toneColor[category.accent]}
+            />
+          </View>
+        ) : null}
         <View style={styles.badge}>
           <AppText variant="labelMd" color={colors.secondary}>
             {toEasternNumerals(items?.length ?? 0)} أقسام رئيسية
@@ -89,7 +100,12 @@ export function AzkarCategoriesScreen({ categoryId }: { categoryId: string }) {
             </AppText>
           </View>
           <View style={styles.bannerIcon}>
-            <Icon name="wb-sunny" size={26} color={colors.secondaryFixed} />
+            <ApiIcon
+              uri={items[0].iconUrl}
+              fallback={items[0].icon as 'spa'}
+              size={26}
+              color={colors.secondaryFixed}
+            />
           </View>
         </Pressable>
       ) : null}
@@ -147,7 +163,12 @@ function SubcategoryCard({ item }: { item: Subcategory }) {
             { backgroundColor: `${toneColor[item.iconTone]}22` },
           ]}
         >
-          <Icon name="spa" size={24} color={toneColor[item.iconTone]} />
+          <ApiIcon
+            uri={item.iconUrl}
+            fallback={item.icon as 'spa'}
+            size={24}
+            color={toneColor[item.iconTone]}
+          />
         </View>
         <View style={styles.arrow}>
           <Icon name="arrow-back-ios" size={16} color={colors.primary} />
@@ -182,6 +203,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: radii.full,
+  },
+  categoryIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   searchWrap: {
     height: 48,

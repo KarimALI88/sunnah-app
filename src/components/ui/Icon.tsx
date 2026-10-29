@@ -1,7 +1,7 @@
 import MaterialIcons from '@expo/vector-icons/MaterialIcons';
 import type { ComponentProps } from 'react';
 
-type IconName = ComponentProps<typeof MaterialIcons>['name'];
+export type IconName = ComponentProps<typeof MaterialIcons>['name'];
 
 interface Props {
   name: IconName;

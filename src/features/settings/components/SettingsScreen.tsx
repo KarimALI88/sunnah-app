@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { AppHeader } from '@/components/shared/AppHeader';
 import { AppText } from '@/components/ui/AppText';
@@ -7,12 +6,6 @@ import { Icon } from '@/components/ui/Icon';
 import { useSettings } from '@/providers/SettingsProvider';
 import { colors, radii, spacing } from '@/theme';
 import { toEasternNumerals } from '@/utils/numerals';
-
-const RECITERS = [
-  { id: 'afasy', name: 'الشيخ مشاري راشد العفاسي', desc: 'تلاوة مريحة بالأحكام والسكينة' },
-  { id: 'ghamdi', name: 'الشيخ سعد بن سعيد الغامدي', desc: 'صوت شجي وترتيل خاشع' },
-  { id: 'ajmy', name: 'الشيخ أحمد بن علي العجمي', desc: 'قراءة مؤثرة بنبرة واضحة' },
-];
 
 const FONT_SIZES = [
   { label: 'صغير', size: 16 },
@@ -23,16 +16,11 @@ const FONT_SIZES = [
 
 export function SettingsScreen() {
   const { settings, update } = useSettings();
-  const [selectedReciter, setSelectedReciter] = useState('afasy');
-  const [morningReminder, setMorningReminder] = useState(true);
-  const [eveningReminder, setEveningReminder] = useState(true);
-  const [nightReminder, setNightReminder] = useState(true);
-
   const currentFontSize = settings.dhikrFontSize ?? 20;
 
   return (
     <View style={styles.container}>
-      <AppHeader title="الإعدادات" subtitle="تخصيص التجربة والتنبيهات" showBrand={true} />
+      <AppHeader title="الإعدادات" subtitle="تخصيص تجربتك" showBrand={true} />
 
       <ScrollView
         style={styles.scroll}
@@ -52,7 +40,7 @@ export function SettingsScreen() {
             </View>
           </View>
           <AppText variant="bodySm" color={colors.onSurfaceVariant}>
-            تخصيص تجربة الاستخدام، القراءة، والتنبيهات
+            تخصيص تجربة الاستخدام والقراءة
           </AppText>
         </View>
 
@@ -67,7 +55,7 @@ export function SettingsScreen() {
               <View>
                 <View style={styles.nameRow}>
                   <AppText variant="labelLg" color={colors.primary}>
-                    ضيف كريم
+                    ضيف
                   </AppText>
                   <View style={styles.localBadge}>
                     <AppText variant="labelSm" color={colors.onSurfaceVariant}>
@@ -80,14 +68,6 @@ export function SettingsScreen() {
                 </AppText>
               </View>
             </View>
-            <Pressable
-              onPress={() => Alert.alert('حساب المستخدم', 'ميزة تسجيل الدخول ستكون متاحة قريباً مع المزامنة السحابية.')}
-              style={styles.loginBtn}>
-              <AppText variant="labelMd" color={colors.primaryContainer}>
-                دخول
-              </AppText>
-              <Icon name="arrow-back-ios" size={14} color={colors.primaryContainer} />
-            </Pressable>
           </View>
           <View style={styles.cloudCard}>
             <View style={styles.cloudLeft}>
@@ -152,127 +132,17 @@ export function SettingsScreen() {
           </View>
         </View>
 
-        {/* Audio Reciter Selection */}
-        <View style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <View style={styles.titleWithIcon}>
-              <Icon name="volume-up" size={20} color={colors.gold} />
-              <AppText variant="labelLg" color={colors.primary}>
-                القارئ المفضل للتلاوة الصوتية
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.recitersList}>
-            {RECITERS.map((r) => {
-              const isSelected = selectedReciter === r.id;
-              return (
-                <Pressable
-                  key={r.id}
-                  onPress={() => setSelectedReciter(r.id)}
-                  style={[
-                    styles.reciterItem,
-                    isSelected && styles.reciterItemActive,
-                  ]}>
-                  <View style={styles.reciterRadio}>
-                    {isSelected ? <View style={styles.radioInner} /> : null}
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <AppText
-                      variant="labelMd"
-                      color={isSelected ? colors.primary : colors.onSurface}>
-                      {r.name}
-                    </AppText>
-                    <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-                      {r.desc}
-                    </AppText>
-                  </View>
-                </Pressable>
-              );
-            })}
-          </View>
-        </View>
-
-        {/* Notifications & Adhan */}
-        <View style={styles.card}>
-          <View style={styles.cardTitleRow}>
-            <View style={styles.titleWithIcon}>
-              <Icon name="notifications" size={20} color={colors.gold} />
-              <AppText variant="labelLg" color={colors.primary}>
-                التنبيهات والأذان
-              </AppText>
-            </View>
-          </View>
-
-          <View style={styles.toggleRow}>
-            <View>
-              <AppText variant="bodyMd" color={colors.primary}>
-                تنبيهات مواقيت الصلاة (الأذان)
-              </AppText>
-              <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-                إشعار صوتي عند دخول وقت الصلاة
-              </AppText>
-            </View>
-            <Switch
-              value={settings.adhanEnabled}
-              onValueChange={(val) => update({ adhanEnabled: val })}
-              trackColor={{ false: colors.surfaceContainer, true: colors.primaryContainer }}
-              thumbColor={settings.adhanEnabled ? colors.gold : colors.outlineVariant}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.toggleRow}>
-            <View>
-              <AppText variant="bodyMd" color={colors.primary}>
-                تذكير أذكار الصباح والمساء
-              </AppText>
-              <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-                تنبيه يومي في أوقات الاستحباب
-              </AppText>
-            </View>
-            <Switch
-              value={morningReminder}
-              onValueChange={setMorningReminder}
-              trackColor={{ false: colors.surfaceContainer, true: colors.primaryContainer }}
-              thumbColor={morningReminder ? colors.gold : colors.outlineVariant}
-            />
-          </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.toggleRow}>
-            <View>
-              <AppText variant="bodyMd" color={colors.primary}>
-                تذكير ورد الليل والاستغفار بالأسحار
-              </AppText>
-              <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-                تنبيه قبل الفجر بساعة لقيام الليل
-              </AppText>
-            </View>
-            <Switch
-              value={nightReminder}
-              onValueChange={setNightReminder}
-              trackColor={{ false: colors.surfaceContainer, true: colors.primaryContainer }}
-              thumbColor={nightReminder ? colors.gold : colors.outlineVariant}
-            />
-          </View>
-        </View>
-
         {/* App Info & About */}
         <View style={styles.card}>
           <View style={styles.appInfoWrap}>
             <View style={styles.appLogoCircle}>
-              <AppText variant="headlineLg" color={colors.gold}>
-                س
-              </AppText>
+              <Image source={require('../../../../assets/images/sunnah-transparent.png')} style={styles.appLogo} resizeMode="contain" />
             </View>
             <AppText variant="headlineMd" color={colors.primary}>
-              تطبيق سكينة (Sakinah)
+              تطبيق سُنَّةُ (Sunnah)
             </AppText>
             <AppText variant="labelSm" color={colors.onSurfaceVariant}>
-              الإصدار ١.٠.٠ • هدوء وسكينة
+              الإصدار ١.٠.٠ • سُنَّةُ
             </AppText>
             <AppText variant="bodySm" color={colors.onSurfaceVariant} align="center" style={{ marginTop: 6 }}>
               ملاذك الرقمي الهادئ للأذكار والمأثورات النبوية ومواقيت الصلاة، صُمم بعناية وتأمل ليعينك على دوام ذكر الله وطمأنينة القلب.
@@ -383,15 +253,6 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
     borderRadius: radii.full,
   },
-  loginBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.surfaceContainerLow,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radii.full,
-  },
   cloudCard: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -429,47 +290,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.secondaryContainer,
     borderColor: colors.gold,
   },
-  recitersList: {
-    gap: spacing.sm,
-  },
-  reciterItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    padding: 10,
-    borderRadius: radii.lg,
-    backgroundColor: colors.surfaceContainerLow,
-    borderWidth: 1,
-    borderColor: 'transparent',
-  },
-  reciterItemActive: {
-    borderColor: colors.gold,
-    backgroundColor: '#FAF7F0',
-  },
-  reciterRadio: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    borderWidth: 2,
-    borderColor: colors.gold,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: colors.gold,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.surfaceContainer,
-  },
   appInfoWrap: {
     alignItems: 'center',
     paddingVertical: spacing.sm,
@@ -485,5 +305,9 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: colors.gold,
     marginBottom: spacing.xs,
+  },
+  appLogo: {
+    width: 48,
+    height: 48,
   },
 });
